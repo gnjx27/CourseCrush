@@ -1,0 +1,36 @@
+.cursor-pointer {
+    cursor: pointer;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #FFFFFA;
+}
+
+/* Add this style for the alert container */
+#alert-container {
+    position: fixed;
+    top: 80px;
+    /* Position below navbar */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    width: auto;
+    max-width: 90%;
+}
+
+/* Style for the alerts */
+#alert-container .alert {
+    min-width: 300px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 10px;
+}
+
+.hover-shadow:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+  }
+
+.transition-all {
+    transition: all 0.3s ease;
+}

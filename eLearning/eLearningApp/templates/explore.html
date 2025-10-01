@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container py-4">
+  <div class="card border-0 rounded-4 shadow-sm bg-white mb-4">
+    <div class="card-body p-4">
+      <div class="row align-items-center mb-3">
+        <div class="col-md-3">
+          <h3 class="fw-bold text-primary mb-0">Explore</h3>
+        </div>
+        <div class="col-md-4">
+          <div class="d-flex">
+            <button class="btn btn-primary rounded-pill px-4 me-2 fw-medium" id="show-courses">Courses</button>
+            <div class="dropdown">
+              <button class="btn btn-outline-secondary rounded-pill px-3 dropdown-toggle fw-medium" id="show-people"
+                  data-bs-toggle="dropdown" aria-expanded="false" style="min-width: 120px;">
+                  People
+              </button>
+              <ul class="dropdown-menu shadow-sm border-0 rounded-3 mt-1">
+                <li><a class="dropdown-item people-filter py-2" data-role="all" href="#">All</a></li>
+                <li><a class="dropdown-item people-filter py-2" data-role="teacher" href="#">Teachers</a></li>
+                <li><a class="dropdown-item people-filter py-2" data-role="student" href="#">Students</a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-5">
+          <div class="input-group">
+            <input type="text" id="search-bar" class="form-control bg-light" placeholder="Search courses or people...">
+          </div>
+        </div>
+      </div>
+    
+      <div id="content-container" class="container-fluid px-0 pb-1" style="max-height: 75vh; overflow: auto;">
+        <!-- Content will be filled with JavaScript -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+    // Store courses, users
+    let courses = [];
+    let users = [];
+    let currentView = 'courses';
+    let role = 'all';
+
+    // Filter courses based on search input
+    function filterItems(searchQuery) {
+        let items;
+        const contentContainer = document.getElementById("content-container");
+        if (currentView === 'courses') {
+            items = courses.filter(course => {
+                return course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    course.description.toLowerCase().includes(searchQuery.toLowerCase());
+            });
+        } else {
+            items = users.filter(user => {
+                const matchesSearch = user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    user.email.toLowerCase().includes(searchQuery.toLowerCase());
+                const matchesRole = role === 'all' || user.role.toLowerCase() === role;
+                return matchesSearch && matchesRole;
+            });
+            contentContainer.classList.add("row", "g-3");
+        }
+        fillContent(items);
+    }
+
+    // Event listener for search bar
+    document.getElementById('search-bar').addEventListener('input', function (event) {
+        filterItems(event.target.value);
+    });
+
+    // handle courses button click
+    document.getElementById('show-courses').addEventListener('click', () => {
+        currentView = 'courses';
+        fillContent(courses);
+    });
+
+    // handle people button click
+    document.querySelectorAll('.people-filter').forEach(item => {
+        item.addEventListener('click', function (event) {
+            event.preventDefault();
+            currentView = 'people';
+            role = this.getAttribute('data-role');
+            // Update button text to selected option
+            document.getElementById('show-people').textContent = this.textContent;
+            filterItems(document.getElementById('search-bar').value);
+        });
+    });
+
+    // fill content
+    async function fillContent(data) {
+        try {
+            const contentContainer = document.getElementById('content-container');
+            contentContainer.innerHTML = '';
+            data.forEach(item => {
+                if (currentView === 'courses') {
+                    contentContainer.innerHTML += `
+                    <div class="card mb-3 border-0 shadow-sm rounded-3 overflow-hidden hover-shadow transition-all">
+                        <div class="card-header bg-light border-0 py-3 d-flex flex-row justify-content-between align-items-center">
+                            <span class="fw-medium"><a class="text-decoration-none text-dark" href="/course/${item.id}">${item.title}</a></span>
+                            {% if request.user.role == 'student' %}
+                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3" id='enroll-btn-${item.id}' data-bs-toggle="modal" data-bs-target="#enrollModal${item.id}">Enroll</button>
+                            {% endif %}
+                        </div>
+                        <div class="card-body">
+                            <a class="d-flex flex-column text-decoration-none text-dark" href="/course/${item.id}">
+                                <p class="card-text mb-3">${item.description}</p>
+                                <p class="text-muted m-0">Created: ${formatTimeAgo(item.created_at)}</p>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="modal fade" id="enrollModal${item.id}">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content border-0 shadow">
+                                <div class="modal-header bg-primary text-white">
+                                    <h5 class="modal-title" id="deleteModalLabel">Confirm Enrollment</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body py-4">
+                                    <p class="mb-0">Are you sure you want to enroll in this course?</p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal" aria-label="Close">Cancel</button>
+                                    <button type="button" class="btn btn-success rounded-pill" id="confirmDelete" onclick='enroll(${item.id})' data-bs-dismiss="modal" aria-label="Close">Enroll</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    `;
+                } else {
+                    contentContainer.innerHTML += `
+                        <div class="col-md-4">
+                            <a href="/user_profile/${item.id}/" style="text-decoration: none; color: black;">
+                                <div class="shadow-sm bg-light p-4 d-flex align-items-center justify-content-center border-end rounded-4 hover-shadow transition-all">
+                                    <div class="text-center">
+                                        <div class="position-relative d-inline-block mb-3">
+                                            <img src="${item.photo}" alt="Profile Photo" 
+                                                class="rounded-circle object-fit-cover border shadow-sm" 
+                                                style="width: 100px; height: 100px;">
+                                        </div>
+                                        <h5 class="fw-bold mb-1">${item.full_name}</h5>
+                                        <p class="text-muted mb-2">@${item.username}</p>
+                                        <p class="text-muted mb-2">${item.status}</p>
+                                        <span class="badge text-white mb-2 ${item.role === 'student' ? 'bg-info' : 'bg-primary'}">${item.role}</span>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    `;
+                }
+            })
+        } catch (error) {
+            console.error('Error fetching courses: ', error);
+        }
+    }
+
+    // enroll
+    async function enroll(courseId) {
+        const userData = await getUserData();
+        try {
+            const response = await fetch(`/api/create_enrolment/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    course: courseId,
+                }),
+            });
+            const data = await response.json();
+            if (response.ok) {
+                displayAlert('success', `Successfully enrolled!`);
+                setTimeout(() => { document.location.reload() }, 1500);
+            } else {
+                const errorMessage = data.detail;
+                throw new Error(errorMessage)
+            }
+        } catch (error) {
+            displayAlert('danger', `Error enrolling: ${error.message}`);
+        }
+    }
+
+    window.onload = async function () {
+        // load courses
+        courses = await getCourses();
+
+        // load users
+        users = await getUsers();
+
+        // fill content with courses
+        fillContent(courses);
+    }
+</script>
+{% endblock %}

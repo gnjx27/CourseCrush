@@ -1,0 +1,471 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container py-4">
+    <!--course title and description-->
+    <div class="card border-0 rounded-4 shadow-sm bg-white mb-4">
+        <div class="card-body p-4">
+            <h3 id="course-title" class="fw-bold text-primary"></h3>
+            <p id="course-teacher" class="text-muted"></p>
+            <hr>
+            <p id="course-description"></p>
+            <p id="created-at" class="text-muted small m-0"></p>
+        </div>
+    </div>
+    <!--course material-->
+    <div class="card border-0 rounded-4 shadow-sm bg-white mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3 class="fw-bold text-primary">Course Material</h3>
+                {% if request.user.role == 'teacher' %}
+                <button class="btn btn-primary rounded-pill px-4" id="add-material-btn" data-bs-toggle="modal"
+                    data-bs-target="#addMaterial">Add Material</button>
+                {% endif %}
+            </div>
+            <hr>
+            <div id="material-container" class="mt-3 row g-3">
+                <!-- Content will be dynamically loaded -->
+                <div id="no-material-message" class="col-12 text-center py-4 d-none">
+                    <div class="p-4 rounded-4 bg-light">
+                        <i class="bi bi-folder text-muted h1 mb-3"></i>
+                        <h5 class="text-muted">No course material available</h5>
+                        <p class="text-muted mb-0">
+                            {% if request.user.role == 'teacher' %}
+                            Click the "Add Material" button to upload content for this course.
+                            {% else %}
+                            The teacher hasn't uploaded any materials for this course yet.
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--feedback-->
+    <div class="card border-0 rounded-4 shadow-sm bg-white mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3 class="fw-bold text-primary">Feedback</h3>
+                {% if request.user.role == 'student' %}
+                <button class="btn btn-primary rounded-pill px-4" id="add-feedback-button" data-bs-toggle="modal"
+                    data-bs-target="#add-feedback-modal">Add Feedback</button>
+                {% endif %}
+            </div>
+            <hr>
+            <div id="feedback-container" class="mt-3 row g-3">
+                <!-- Content will be dynamically loaded -->
+                <div id="no-feedback-message" class="col-12 text-center py-4 d-none">
+                    <div class="p-4 rounded-4 bg-light">
+                        <i class="bi bi-chat-dots text-muted h1 mb-3"></i>
+                        <h5 class="text-muted">No feedback available</h5>
+                        <p class="text-muted mb-0">
+                            {% if request.user.role == 'student' %}
+                            Be the first to provide feedback for this course!
+                            {% else %}
+                            No students have provided feedback for this course yet.
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--modal for adding course material-->
+<div class="modal fade" id="addMaterial" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header bg-primary text-white border-0 rounded-top-4">
+                <h5 class="modal-title fw-bold" id="createCourseModalLabel">Add Material</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form>
+                    {% csrf_token %}
+                    {{ add_material_form.as_p }}
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary rounded-pill px-4" id="confirmAddCourse"
+                    onclick="addMaterial()">Add</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--modal for adding feedback-->
+<div class="modal fade" id="add-feedback-modal" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header bg-primary text-white border-0 rounded-top-4">
+                <h5 class="modal-title fw-bold">Add Feedback</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form>
+                    {% csrf_token %}
+                    {{ add_feedback_form.as_p }}
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary rounded-pill px-4" onclick="addFeedback()" 
+                    data-bs-dismiss="modal">Add</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // store course, materials
+    let course;
+    let materials = [];
+    let feedbacks = [];
+
+    // fill course details
+    async function fillCourseDetails(course) {
+        // get html elements
+        const courseTitle = document.getElementById('course-title');
+        const courseTeacher = document.getElementById('course-teacher');
+        const courseDescription = document.getElementById('course-description');
+        const courseCreateAt = document.getElementById('created-at');
+        // get teacher details
+        const teacherId = course.teacher;
+        const teacherDetails = await getUserData(teacherId);
+        // fill html elements
+        courseTitle.textContent = `${course.title}`;
+        courseTeacher.textContent = `Teacher: ${teacherDetails.full_name}`;
+        courseDescription.textContent = `${course.description}`;
+        courseCreateAt.textContent = `Created: ${formatTimeAgo(course.created_at)}`;
+    }
+
+    // add course material
+    async function addMaterial() {
+        // get file input
+        const fileInput = document.getElementById('add-material-file');
+        const file = fileInput.files[0];
+        // check for file input
+        if (!file) {
+            console.error("No file selected");
+            return;
+        }
+
+        // get description of material
+        const materialDescription = document.getElementById('add-material-description').value;
+
+        // create form data to submit post request
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('description', materialDescription);
+        formData.append('course', course.id);
+
+        // try to add material
+        try {
+            const response = await fetch('/api/create_material/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: formData
+            });
+            const data = await response.json();
+            if (response.ok) {
+                displayAlert('success', 'Material added!');
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                const errorMessage = data.detail;
+                throw new Error(errorMessage)
+            }
+        } catch (error) {
+            displayAlert('danger', `Error adding material: ${error.message}`);
+        }
+    }
+
+    // edit material
+    async function editMaterial(materialId) {
+        const fileInput = document.getElementById(`edit-material-file-${materialId}`);
+        const file = fileInput.files[0];
+        const description = document.getElementById(`edit-material-description-${materialId}`).value;
+        const formData = new FormData();
+        formData.append('description', description);
+        formData.append('course', course.id);
+        if (file) {
+            formData.append('file', file);
+        }
+        try {
+            const response = await fetch(`/api/material/${materialId}/`, {
+                method: 'PUT',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                displayAlert('success', 'Material updated successfully!');
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                const errorMessage = data.detail;
+                throw new Error(errorMessage);
+            }
+        } catch (error) {
+            displayAlert('danger', `Error updating material: ${error.message}`);
+        }
+    }
+
+    // delete material
+    async function deleteMaterial(materialId) {
+        try {
+            const response = await fetch(`/api/material/${materialId}/`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            });
+            if (response.ok) {
+                // Display alert and reload the page after successful delete
+                displayAlert('danger', `Material deleted.`);
+                setTimeout(() => { document.location.reload() }, 1500);
+            } else {
+                // Handle error
+                const errorMessage = data.detail;
+                throw new Error(errorMessage);
+            }
+        } catch (error) {
+            console.error('Error deleting material: ', error);
+        }
+    }
+
+    // fill material container
+    async function fillMaterialContainer() {
+        const materialContainer = document.getElementById('material-container');
+        const noMaterialMessage = document.getElementById('no-material-message');
+        try {
+            // Clear previous content
+            materialContainer.innerHTML = '';
+            
+            // Filter materials for this course
+            const courseMaterials = materials.filter(material => course.id == material.course);
+            
+            if (courseMaterials.length === 0) {
+                // Show no materials message
+                noMaterialMessage.classList.remove('d-none');
+                materialContainer.appendChild(noMaterialMessage);
+            } else {
+                // Hide no materials message if it exists
+                if (noMaterialMessage) {
+                    noMaterialMessage.classList.add('d-none');
+                }
+                
+                // Add material cards
+                courseMaterials.forEach(material => {
+                    const materialCard = `
+                    <div class="col-md-6">
+                        <div class="card h-100 border-0 shadow-sm rounded-4 hover-shadow transition-all">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between mb-3">
+                                    <h5 class="fw-bold card-title mb-0 text-primary">${material.description}</h5>
+                                    {% if request.user.role == 'teacher' %}
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-light rounded-circle p-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <div class="d-flex flex-column align-items-center" style="gap: 3px;">
+                                            <div class="bg-secondary opacity-50 rounded-circle" style="width: 4px; height: 4px;"></div>
+                                            <div class="bg-secondary opacity-50 rounded-circle" style="width: 4px; height: 4px;"></div>
+                                            <div class="bg-secondary opacity-50 rounded-circle" style="width: 4px; height: 4px;"></div>
+                                        </div>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                        <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#edit-modal-${material.id}" href="#"><i class="bi bi-pencil me-2"></i>Edit</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#deleteModal-${material.id}" href="#"><i class="bi bi-trash me-2"></i>Delete</a></li>
+                                        </ul>
+                                    </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="d-flex align-items-center mb-2">
+                                    <a href="${material.file}" class="text-decoration-none fw-medium text-dark bg-light p-2 rounded-3 shadow-sm small w-100" target="_blank">
+                                        ${material.file.split('/').pop()}
+                                    </a>
+                                </div>
+
+                                <p class="card-text text-muted m-0">${formatTimeAgo(material.created_at)}</p>
+                                
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modal: Delete Confirmation -->
+                    <div class="modal fade" id="deleteModal-${material.id}" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content border-0 shadow rounded-4">
+                            <div class="modal-header bg-danger text-white border-0 rounded-top-4">
+                            <h5 class="modal-title fw-bold" id="deleteModalLabel">Confirm Deletion</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body p-4">
+                            <div class="d-flex align-items-center">
+                                <div class="p-3 bg-danger-subtle rounded-circle me-3">
+                                <i class="bi bi-exclamation-triangle-fill text-danger h4 mb-0"></i>
+                                </div>
+                                <p class="mb-0">Are you sure you want to delete this material? This action cannot be undone.</p>
+                            </div>
+                            </div>
+                            <div class="modal-footer border-0">
+                            <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-danger rounded-pill px-4" id="confirmDelete" onclick='deleteMaterial(${material.id})' data-bs-dismiss="modal">Delete</button>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+
+                    <!-- Modal: Edit material -->
+                    <div class="modal fade" id="edit-modal-${material.id}" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content border-0 shadow rounded-4">
+                            <div class="modal-header bg-primary text-white border-0 rounded-top-4">
+                            <h5 class="modal-title fw-bold" id="editModalLabel">Edit Material</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body p-4">
+                            <form>
+                                {% csrf_token %}
+                                {{ edit_material_form.as_p }}
+                            </form>
+                            </div>
+                            <div class="modal-footer border-0">
+                            <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" onclick='editMaterial(${material.id})' class="btn btn-primary rounded-pill px-4" data-bs-dismiss="modal">Save changes</button>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+                    `;
+                    materialContainer.innerHTML += materialCard;
+                });
+            }
+            
+            // Add CSS for hover effect
+            const style = document.createElement('style');
+            style.textContent = `
+                .hover-shadow:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+                }
+                .transition-all {
+                transition: all 0.3s ease;
+                }
+            `;
+            document.head.appendChild(style);
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+
+    // handle add feedback
+    async function addFeedback() {
+        const feedbackComment = document.getElementById('feedback-comment').value;
+        try {
+            const response = await fetch(`/api/create_feedback/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    comment: feedbackComment,
+                    course: course.id
+                })
+            });
+            const data = await response.json();
+
+            if (response.ok) {
+                displayAlert('success', 'Feedback added!');
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                const errorMessage = data.detail;
+                throw new Error(errorMessage);
+            }
+        } catch (error) {
+            displayAlert('danger', `Error adding feedback: ${error.message}`);
+        }
+    }
+
+    // fill feedback container
+    async function fillFeedbackContainer() {
+        const feedbackContainer = document.getElementById('feedback-container');
+        const noFeedbackMessage = document.getElementById('no-feedback-message');
+        try {
+            // Clear previous content
+            feedbackContainer.innerHTML = '';
+            
+            // Filter feedbacks for this course
+            const courseFeedbacks = feedbacks.filter(feedback => feedback.course == course.id);
+            
+            if (courseFeedbacks.length === 0) {
+                // Show no feedback message
+                noFeedbackMessage.classList.remove('d-none');
+                feedbackContainer.appendChild(noFeedbackMessage);
+            } else {
+                // Hide no feedback message if it exists
+                if (noFeedbackMessage) {
+                    noFeedbackMessage.classList.add('d-none');
+                }
+                
+                // Add feedback cards
+                for (const feedback of courseFeedbacks) {
+                    const student = await getUserData(feedback.student);
+                    const feedbackCard = `
+                    <div class="col-md-6">
+                        <div class="card h-100 border-0 shadow-sm rounded-4 bg-white">
+                            <div class="card-body p-4 position-relative">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <h5 class="fw-semibold card-title text-secondary">${student.full_name}</h5>
+                                </div>
+
+                                <!-- Feedback Comment -->
+                                <div class="d-flex align-items-center mb-2">
+                                    <p class="text-muted fw-normal">${feedback.comment}</p>
+                                </div>
+
+                                <p class="card-text text-muted small m-0">${formatTimeAgo(feedback.created_at)}</p>
+                            </div>
+                        </div>
+                    </div>
+                    `;
+                    feedbackContainer.innerHTML += feedbackCard;
+                }
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    }
+
+    window.onload = async function () {
+        course = await getCourse('{{ course }}');
+
+        // fill course details
+        fillCourseDetails(course);
+
+        // get materials
+        materials = await getMaterials();
+
+        // get feedbacks
+        feedbacks = await getFeedbacks();
+
+        // fill material container
+        fillMaterialContainer();
+
+        // fill feedback container
+        fillFeedbackContainer();
+    }
+</script>
+{% endblock %}

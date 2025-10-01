@@ -1,0 +1,505 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-fluid py-4">
+  <!-- Dashboard Header with Profile Summary -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="card-body p-0">
+          <div class="row g-0">
+            <div class="col-md-4 bg-light p-4 d-flex align-items-center justify-content-center border-end">
+              <div class="text-center">
+                <div class="position-relative d-inline-block mb-3">
+                  <img id="photo" src="" alt="Profile Photo" class="rounded-circle object-fit-cover border shadow-sm"
+                    style="width: 100px; height: 100px;">
+                </div>
+                <h4 id="fullname" class="fw-bold mb-1">Loading...</h4>
+                <p id="username" class="text-muted mb-1">Loading...</p>
+                <span id="role" class="badge bg-primary text-white mb-2">Loading...</span>
+              </div>
+            </div>
+            <div class="col-md-8 p-4">
+              <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="fw-bold mb-0">Instructor Dashboard</h3>
+                <div>
+                  <button class="btn btn-primary rounded-pill px-3 me-2" data-bs-toggle="modal"
+                    data-bs-target="#createCourseModal">
+                    Add Course
+                  </button>
+                  <button class="btn btn-outline-danger rounded-pill px-3" data-bs-toggle="modal"
+                    data-bs-target="#block-student-modal">
+                    Block
+                  </button>
+                </div>
+              </div>
+              <p id="status" class="text-muted mb-0">Loading status...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="row g-4">
+    <!-- My Courses Section -->
+    <div class="col-lg-8">
+      <div class="card border-0 rounded-4 shadow-sm h-100">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-0">
+          <h5 class="fw-bold mb-0">
+            <i class="bi bi-book me-2 text-primary"></i>My Courses
+          </h5>
+        </div>
+        <div class="card-body">
+          <div id="courses-container" class="row g-3">
+            <!-- Courses will be dynamically loaded here -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Sidebar: Notifications & Chat -->
+    <div class="col-lg-4">
+      <!-- Notifications Panel -->
+      <div class="card border-0 rounded-4 shadow-sm mb-4">
+        <div class="card-header bg-primary text-white py-3 rounded-top-4">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-bell-fill me-2"></i>
+            <h5 class="mb-0 fw-bold">Notifications</h5>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <div id="notifications-container" style="max-height: 250px; overflow-y: auto;" class="p-3">
+            <!-- Notifications will be filled by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Panel -->
+      <div class="card border-0 rounded-4 shadow-sm">
+        <div class="card-header bg-info text-white py-3 rounded-top-4">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-chat-dots-fill me-2"></i>
+            <h5 class="mb-0 fw-bold">Global Chat</h5>
+          </div>
+        </div>
+        <div class="card-body p-3">
+          <div id="chat-container" class="bg-light rounded p-3 mb-3" style="height: 200px; overflow-y: auto;">
+            <!-- Messages will appear here -->
+          </div>
+          <div class="input-group">
+            <input id="chat-message-input" type="text" class="form-control border-end-0 rounded-start-pill"
+              placeholder="Type your message...">
+            <button id="chat-message-submit" class="btn btn-primary rounded-end-pill px-3">
+              Send
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Create Course -->
+<div class="modal fade" id="createCourseModal" tabindex="-1" aria-labelledby="createCourseModalLabel"
+  aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow rounded-4">
+      <div class="modal-header bg-primary text-white border-0 rounded-top-4">
+        <h5 class="modal-title fw-bold" id="createCourseModalLabel">Add New Course</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form>
+          {% csrf_token %}
+          {{ create_course_form.as_p }}
+        </form>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary rounded-pill px-4" id="confirmAddCourse"
+          onclick="createCourse()">Add Course</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Block Student -->
+<div class="modal fade" id="block-student-modal" tabindex="-1" aria-labelledby="blockStudentModalLabel"
+  aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow rounded-4">
+      <div class="modal-header bg-danger text-white border-0 rounded-top-4">
+        <h5 class="modal-title fw-bold" id="blockStudentModalLabel">Block Student</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <form>
+          {% csrf_token %}
+          {{ block_student_form.as_p }}
+        </form>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger rounded-pill px-4" id="confirm-block" onclick="blockStudent()">Block
+          Student</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!--script-->
+<script>
+  const chatContainer = document.getElementById('chat-container');
+  const chatSocket = new WebSocket(
+    'ws://'
+    + window.location.host
+    + '/ws/chat/'
+    + 'global'
+    + '/'
+  );
+
+  // Function to create a message element
+  function createMessageElement(username, message, created_at) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'mb-2';
+
+    const userBadge = document.createElement('span');
+    userBadge.className = 'badge bg-success me-2';
+    userBadge.textContent = username;
+
+    const messageText = document.createElement('span');
+    messageText.textContent = message;
+
+    const timeSpan = document.createElement('small');
+    timeSpan.className = 'text-muted ms-2';
+    timeSpan.textContent = formatTimeAgo(created_at);
+
+    messageDiv.appendChild(userBadge);
+    messageDiv.appendChild(messageText);
+    messageDiv.appendChild(timeSpan);
+
+    return messageDiv;
+  }
+
+  chatSocket.onmessage = function (e) {
+    const data = JSON.parse(e.data);
+
+    // Handle chat history when connecting
+    if (data.history) {
+      // Clear any existing content
+      chatContainer.innerHTML = '';
+
+      // Add each message from history
+      data.history.forEach(item => {
+        const messageElement = createMessageElement(
+          item.username,
+          item.message,
+          item.created_at
+        );
+        chatContainer.appendChild(messageElement);
+      });
+    }
+    // Handle new individual messages
+    else if (data.message) {
+      const messageElement = createMessageElement(
+        data.username,
+        data.message,
+        data.created_at
+      );
+      chatContainer.appendChild(messageElement);
+    }
+
+    // Auto-scroll to bottom of chat
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  };
+
+  chatSocket.onclose = function (e) {
+    console.error('Chat socket closed unexpectedly');
+  };
+
+  document.querySelector('#chat-message-input').focus();
+  document.querySelector('#chat-message-input').onkeyup = function (e) {
+    if (e.key === 'Enter') {  // enter, return
+      document.querySelector('#chat-message-submit').click();
+    }
+  };
+
+  document.querySelector('#chat-message-submit').onclick = function (e) {
+    const messageInputDom = document.querySelector('#chat-message-input');
+    const message = messageInputDom.value;
+    if (message.trim()) {
+      chatSocket.send(JSON.stringify({
+        'message': message
+      }));
+      messageInputDom.value = '';
+    }
+  };
+
+  // store user data, courses, notifications
+  let userData;
+  let courses = [];
+  let notifications = [];
+
+  // create course
+  async function createCourse() {
+    const courseTitle = document.getElementById('create-course-title').value;
+    const courseDescription = document.getElementById('create-course-description').value;
+    try {
+      const response = await fetch('/api/create_course/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ title: courseTitle, description: courseDescription })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        displayAlert('success', 'Course created successfully!');
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        const errorMessage = data.detail;
+        throw new Error(errorMessage)
+      }
+    } catch (error) {
+      displayAlert('danger', `Error creating course: ${error.message}`);
+    }
+  }
+
+  // edit course
+  async function editCourse(courseId) {
+    const title = document.getElementById(`edit-course-title-${courseId}`).value;
+    const description = document.getElementById(`edit-course-description-${courseId}`).value;
+    try {
+      const response = await fetch(`/api/course/${courseId}/`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+          title: title,
+          description: description
+        }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        displayAlert('success', 'Course updated successfully!');
+        setTimeout(() => { document.location.reload() }, 1500);
+      } else {
+        displayAlert('danger', 'Error updating course: ', data.error);
+      }
+    } catch (error) {
+      console.error('Error updating course: ', error);
+      displayAlert('danger', 'Error updating course: ', error);
+    }
+  }
+
+  // delete course
+  async function deleteCourse(courseId, courseTitle) {
+    try {
+      const response = await fetch(`/api/course/${courseId}/`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token }}'
+        }
+      });
+      if (response.ok) {
+        // Display alert and reload the page after successful delete
+        displayAlert('danger', `Course "${courseTitle}" has been deleted.`);
+        setTimeout(() => { document.location.reload() }, 1500);
+      } else {
+        // Handle error
+        throw new Error('Error deleting course.');
+      }
+    } catch (error) {
+      displayAlert('danger', `Error deleting course: ${error}`);
+    }
+  }
+
+  async function blockStudent() {
+    const student = document.getElementById('block-student-student').value;
+    const course = document.getElementById('block-student-course').value;
+    let reason = document.getElementById('block-student-reason').value;
+    if (!reason) {
+      reason = 'No reason specified.';
+    }
+    try {
+      const response = await fetch(`/api/block_student/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+          student: student,
+          course: course,
+          reason: reason
+        })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        // Display alert and reload the page after successful block
+        displayAlert('success', `Student successfully blocked from course.`);
+        setTimeout(() => { document.location.reload() }, 1500);
+      } else {
+        // Handle error
+        throw new Error(data.detail || 'Error blocking student');
+      }
+    } catch (error) {
+      displayAlert('danger', error.message);
+    }
+  }
+
+  // fill course cards
+  async function fillOwnedCourses(userData, courses) {
+    try {
+      const coursesContainer = document.getElementById('courses-container');
+      coursesContainer.innerHTML = '';
+
+      if (courses.filter(course => userData.id == course.teacher).length === 0) {
+        coursesContainer.innerHTML = '<div class="text-center py-5 text-muted"><i class="bi bi-book h1 d-block mb-3"></i>No courses yet. Click "Add Course" to create your first course.</div>';
+        return;
+      }
+
+      courses.forEach(course => {
+        if (userData.id == course.teacher) {
+          const courseCard = `
+          <div class="col-md-6 col-xl-4">
+            <div class="card h-100 border-0 shadow-sm rounded-4 hover-shadow transition-all">
+              <div class="card-body p-4">
+                <div class="d-flex justify-content-between mb-3">
+                  <h5 class="fw-bold card-title mb-0 text-primary">${course.title}</h5>
+                  <div class="dropdown">
+                    <button class="btn btn-sm btn-light rounded-circle p-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                      <div class="d-flex flex-column align-items-center" style="gap: 3px;">
+                        <div class="bg-secondary opacity-50 rounded-circle" style="width: 4px; height: 4px;"></div>
+                        <div class="bg-secondary opacity-50 rounded-circle" style="width: 4px; height: 4px;"></div>
+                        <div class="bg-secondary opacity-50 rounded-circle" style="width: 4px; height: 4px;"></div>
+                      </div>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                      <li><a class="dropdown-item" href="/course/${course.id}"><i class="bi bi-eye me-2"></i>View</a></li>
+                      <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#edit-modal-${course.id}" href="#"><i class="bi bi-pencil me-2"></i>Edit</a></li>
+                      <li><hr class="dropdown-divider"></li>
+                      <li><a class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#deleteModal-${course.id}" href="#"><i class="bi bi-trash me-2"></i>Delete</a></li>
+                    </ul>
+                  </div>
+                </div>
+                
+                <p class="card-text text-muted">${course.description}</p>
+                
+                <div class="mt-3 pt-3 border-top d-flex justify-content-between align-items-center">
+                  <a href="/course/${course.id}" class="btn btn-sm btn-primary rounded-pill px-3 w-100">Manage</a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Modal: Delete Confirmation -->
+          <div class="modal fade" id="deleteModal-${course.id}" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header bg-danger text-white border-0 rounded-top-4">
+                  <h5 class="modal-title fw-bold" id="deleteModalLabel">Confirm Deletion</h5>
+                  <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                  <div class="d-flex align-items-center">
+                    <div class="p-3 bg-danger-subtle rounded-circle me-3">
+                      <i class="bi bi-exclamation-triangle-fill text-danger h4 mb-0"></i>
+                    </div>
+                    <p class="mb-0">Are you sure you want to delete "${course.title}"? This action cannot be undone.</p>
+                  </div>
+                </div>
+                <div class="modal-footer border-0">
+                  <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                  <button type="button" class="btn btn-danger rounded-pill px-4" id="confirmDelete" onclick='deleteCourse(${course.id}, "${course.title}")' data-bs-dismiss="modal">Delete</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Modal: Edit Course -->
+          <div class="modal fade" id="edit-modal-${course.id}" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header bg-primary text-white border-0 rounded-top-4">
+                  <h5 class="modal-title fw-bold" id="editModalLabel">Edit Course</h5>
+                  <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                  <form>
+                    {% csrf_token %}
+                    {{ edit_course_form.as_p }}
+                  </form>
+                </div>
+                <div class="modal-footer border-0">
+                  <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                  <button type="button" onclick='editCourse(${course.id})' class="btn btn-primary rounded-pill px-4" data-bs-dismiss="modal">Save changes</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+          coursesContainer.innerHTML += courseCard;
+        }
+      });
+
+    } catch (error) {
+      console.error('Error fetching courses: ', error);
+    }
+  }
+
+  // fill notification cards
+  async function fillNotifications(notifications) {
+    const notificationsContainer = document.getElementById('notifications-container');
+    notificationsContainer.innerHTML = '';
+
+    if (notifications.length === 0) {
+      notificationsContainer.innerHTML = '<div class="text-center py-4 text-muted"><i class="bi bi-bell-slash h1 d-block mb-3"></i>No notifications yet.</div>';
+      return;
+    }
+
+    notifications.forEach(notification => {
+      const notificationCard = `
+        <div class="card mb-2 border-0 bg-light rounded-3">
+          <div class="card-body p-3">
+            <div class="d-flex">
+              <div class="flex-shrink-0 me-3">
+                <div class="bg-primary bg-opacity-1 p-2 rounded-circle">
+                  <i class="bi bi-info-circle-fill text-primary"></i>
+                </div>
+              </div>
+              <div>
+                <p class="card-text mb-1 small">${notification.message}</p>
+                <small class="text-muted">${formatTimeAgo(notification.created_at)}</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      notificationsContainer.innerHTML += notificationCard;
+    })
+  }
+
+  window.onload = async function () {
+    // fetch user data, courses, notifications
+    userData = await getUserData();
+    courses = await getCourses();
+    notifications = await getNotifications();
+
+    // fill profile details
+    await fillProfile(userData);
+
+    // fill courses owned by current user
+    await fillOwnedCourses(userData, courses);
+
+    // fill notifications
+    await fillNotifications(notifications);
+  }
+</script>
+{% endblock %}

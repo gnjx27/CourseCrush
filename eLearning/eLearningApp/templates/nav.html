@@ -1,0 +1,31 @@
+<div class="container-fluid shadow-sm bg-white sticky-top py-2">
+  <nav class="container-lg navbar navbar-expand-lg navbar-light">
+      <div class="container-fluid px-0">
+        <a class="navbar-brand fw-bold text-primary" href="/">CourseCrush</a>
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+              {% if request.user.is_authenticated %}
+              <!-- Show this link if the user is logged in -->
+              <li class="nav-item me-2">
+                <button class="nav-link btn btn-light rounded-pill px-3" onclick='window.location.href="/explore/"'>Explore</button>
+              </li>
+              <li class="nav-item">
+                  <button class="nav-link btn btn-outline-danger rounded-pill px-3" id="logout-btn">Logout</button>
+              </li>
+              {% else %}
+              <!-- Show these links if the user is not logged in -->
+              <li class="nav-item me-2">
+                  <a class="nav-link btn btn-outline-primary rounded-pill px-3" href="{% url 'login' %}">Login</a>
+              </li>
+              <li class="nav-item">
+                  <a class="nav-link btn btn-primary rounded-pill px-3" href="{% url 'register' %}">Register</a>
+              </li>
+              {% endif %}
+          </ul>
+        </div>
+      </div>
+  </nav>
+</div>

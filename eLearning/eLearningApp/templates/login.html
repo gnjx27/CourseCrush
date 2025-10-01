@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-xl-5 col-md-6 col-sm-9">
+      <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="card-header bg-primary text-white text-center py-3">
+          <h4 class="mb-0 fw-bold">Login</h4>
+        </div>
+        <div class="card-body p-4 p-md-5">
+          <form id="login-form" action="{% url 'login' %}" method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="mb-3">
+              {{ form.as_p }}
+            </div>
+            <div class="d-grid gap-2 mt-4">
+              <button class="btn btn-primary py-2 fw-bold rounded-pill" type="submit">Login</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', async function() {
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+      loginForm.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        const username = document.getElementById('login-username').value;
+        const password = document.getElementById('login-password').value;
+
+        try {
+          const response = await fetch('{% url "api_login" %}', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': '{{csrf_token}}'
+            },
+            body: JSON.stringify({username: username, password: password})
+          });
+          const data = await response.json();
+          if (response.ok) {
+            displayAlert('success', 'Logging in...');
+            setTimeout(() => window.location.href = '/', 1000);
+          } else {
+            alert('Login failed: ' + (data.error || 'Invalid credentials'));
+          }
+        } catch (error) {
+          console.error('Error loggin in: ', error);
+          displayAlert('danger', 'An error occurred. Please try again.');
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}
